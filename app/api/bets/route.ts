@@ -5,7 +5,7 @@ import { calcPayout, generateId } from '../../lib/utils'
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId')
   const marketId = req.nextUrl.searchParams.get('marketId')
-  const db = await readDB()
+  const db = readDB()
   let bets = db.bets
   if (userId) bets = bets.filter(b => b.userId === userId)
   if (marketId) bets = bets.filter(b => b.marketId === marketId)
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Side must be yes or no' }, { status: 400 })
   }
 
-  const db = await readDB()
+  const db = readDB()
   const user = db.users.find(u => u.id === userId)
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
@@ -61,6 +61,6 @@ export async function POST(req: NextRequest) {
   market.totalVolume += amount
 
   db.bets.push(bet)
-  await writeDB(db)
+  writeDB(db)
   return NextResponse.json({ bet, user }, { status: 201 })
 }

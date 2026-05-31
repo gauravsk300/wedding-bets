@@ -2,78 +2,30 @@ import fs from 'fs'
 import path from 'path'
 import type { Market, Bet, User } from '../types'
 
+const DB_PATH = path.join(process.cwd(), 'data', 'db.json')
+
 export interface DB {
   users: User[]
   markets: Market[]
   bets: Bet[]
 }
 
-// ── Upstash Redis (production) ──────────────────────────────────────────────
-
-async function redisCmd(...args: unknown[]): Promise<unknown> {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) throw new Error('no upstash config')
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(args),
-    cache: 'no-store',
-  })
-  const data = await res.json()
-  return data.result
-}
-
-async function redisRead(): Promise<DB | null> {
-  const raw = await redisCmd('GET', 'db') as string | null
-  return raw ? JSON.parse(raw) : null
-}
-
-async function redisWrite(data: DB): Promise<void> {
-  await redisCmd('SET', 'db', JSON.stringify(data))
-}
-
-// ── Local file fallback (development) ──────────────────────────────────────
-
-const DB_PATH = path.join(process.cwd(), 'data', 'db.json')
-
-function fileRead(): DB | null {
+export function readDB(): DB {
   try {
-    if (!fs.existsSync(DB_PATH)) return null
+    if (!fs.existsSync(DB_PATH)) {
+      return writeDB({ users: [], markets: seedMarkets(), bets: [] })
+    }
     return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'))
-  } catch {
-    return null
-  }
-}
-
-function fileWrite(data: DB): void {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true })
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
-}
-
-// ── Public API ──────────────────────────────────────────────────────────────
-
-export async function readDB(): Promise<DB> {
-  const useRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
-  try {
-    const data = useRedis ? await redisRead() : fileRead()
-    return data ?? (await writeDB({ users: [], markets: seedMarkets(), bets: [] }))
   } catch {
     return { users: [], markets: seedMarkets(), bets: [] }
   }
 }
 
-export async function writeDB(data: DB): Promise<DB> {
-  const useRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
-  if (useRedis) {
-    await redisWrite(data)
-  } else {
-    fileWrite(data)
-  }
+export function writeDB(data: DB): DB {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true })
+  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
   return data
 }
-
-// ── Seed data ───────────────────────────────────────────────────────────────
 
 function seedMarkets(): Market[] {
   const now = Date.now()

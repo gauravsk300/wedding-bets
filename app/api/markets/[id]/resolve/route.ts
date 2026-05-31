@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'result must be yes or no' }, { status: 400 })
   }
 
-  const db = await readDB()
+  const db = readDB()
   const marketIdx = db.markets.findIndex(m => m.id === id)
   if (marketIdx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -43,6 +43,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
-  await writeDB(db)
+  writeDB(db)
   return NextResponse.json(market)
 }
