@@ -4,7 +4,7 @@ import { generateId } from '../../lib/utils'
 import type { MarketCategory } from '../../types'
 
 export async function GET() {
-  const db = readDB()
+  const db = await readDB()
   return NextResponse.json(db.markets)
 }
 
@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
     totalVolume: 0,
   }
 
-  const db = readDB()
+  const db = await readDB()
   db.markets.unshift(market)
-  writeDB(db)
+  await writeDB(db)
   return NextResponse.json(market, { status: 201 })
 }
